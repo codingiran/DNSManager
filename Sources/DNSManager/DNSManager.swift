@@ -1,9 +1,8 @@
 //
 //  DNSManager.swift
-//  ToggleDNS
+//  DNSManager
 //
-//  Created by Joseph Goodrick on 4/5/18.
-//  Copyright © 2018 G.O.O.D. Corp. All rights reserved.
+//  Created by CodingIran on 2022/11/11.
 //
 
 import Foundation
@@ -77,11 +76,6 @@ class DNSManager: ScriptRunner {
             if #available(macOS 11.0, *) {
                 os_log("restoreDNS allNetworkNames is \(allNetworkNames)")
             }
-#if DEBUG
-            if #available(macOS 11.0, *) {
-                os_log("restoreDNS allNetworkNames is \(allNetworkNames)")
-            }
-#endif
             allNetworkNames.forEach { [weak self] in
                 if let backupDNS = DNSMap[$0] {
                     self?.setDNS(backupDNS, to: $0)

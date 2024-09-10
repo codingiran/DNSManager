@@ -1,9 +1,8 @@
 //
 //  RR.swift
-//  DNS
+//  DNSManager
 //
-//  Created by Vincent Huang on 2020/6/20.
-//  Copyright © 2020 Vincent Huang. All rights reserved.
+//  Created by CodingIran on 2022/11/11.
 //
 
 import Foundation

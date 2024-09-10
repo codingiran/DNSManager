@@ -1,17 +1,25 @@
 //
 //  DNS.swift
-//  DNS
+//  DNSManager
 //
-//  Created by Vincent Huang on 2020/6/20.
-//  Copyright © 2020 Vincent Huang. All rights reserved.
+//  Created by CodingIran on 2022/11/11.
 //
 
 import Foundation
 import Network
 
-enum DNSServiceError: Error {
+enum DNSServiceError: LocalizedError {
     case connectionNotReady
     case responseNotComplete
+    
+    var errorDescription: String? {
+        switch self {
+        case .connectionNotReady:
+            return "Connection not ready"
+        case .responseNotComplete:
+            return "Response not complete"
+        }
+    }
 }
 
 // https://developer.apple.com/documentation/network

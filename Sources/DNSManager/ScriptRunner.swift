@@ -1,6 +1,6 @@
 //
 //  ScriptRunner.swift
-//  Runner
+//  DNSManager
 //
 //  Created by CodingIran on 2022/11/11.
 //

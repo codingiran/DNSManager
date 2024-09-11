@@ -26,8 +26,10 @@ public enum ScriptError: LocalizedError {
 }
 
 public class ScriptRunner {
+    public init() {}
+
     @discardableResult
-    func runBash(path: String = "/bin/bash", command: [String]) -> String? {
+    public func runBash(path: String = "/bin/bash", command: [String]) -> String? {
         let process = Process()
         process.launchPath = path
         process.arguments = command
@@ -39,7 +41,7 @@ public class ScriptRunner {
         return String(data: fileData, encoding: String.Encoding.utf8)?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }
 
-    func runScriptWithRootPermission(script: String) throws {
+    public func runScriptWithRootPermission(script: String) throws {
         let tmpPath = FileManager.default.temporaryDirectory.appendingPathComponent(NSUUID().uuidString).appendingPathExtension("sh")
         try script.write(to: tmpPath, atomically: true, encoding: .utf8)
         let appleScriptStr = "do shell script \"bash \(tmpPath.path) \" with administrator privileges"

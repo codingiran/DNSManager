@@ -21,8 +21,8 @@ import Foundation
 /// Current DNSManager version Release 0.0.1. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
 public let version = "0.0.1"
 
-class DNSManager: ScriptRunner {
-    static let togglingDNS = "6.6.6.6"
+open class DNSManager: ScriptRunner {
+    public static let togglingDNS = "6.6.6.6"
 
     /// 路由器设置的默认 DNS
     private lazy var routerDefaultDNS: [String]? = {

@@ -25,7 +25,7 @@ public enum ScriptError: LocalizedError {
     }
 }
 
-public class ScriptRunner {
+open class ScriptRunner {
     public init() {}
 
     @discardableResult

@@ -15,7 +15,7 @@ public enum ScriptError: LocalizedError {
     case initAppleScriptFailed
     case executeAppleScriptFailed(String)
 
-    var localizedDescription: String {
+    public var errorDescription: String? {
         switch self {
         case .initAppleScriptFailed:
             return "init AppleScript failed"

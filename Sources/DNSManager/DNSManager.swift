@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import ScriptRunner
 
 #if os(macOS)
 
@@ -18,8 +19,8 @@ import Foundation
 #error("DNSManager doesn't support Swift versions below 5.5.")
 #endif
 
-/// Current DNSManager version Release 0.0.2. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
-public let version = "0.0.2"
+/// Current DNSManager version Release 0.0.3. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
+public let version = "0.0.3"
 
 open class DNSManager: ScriptRunner {
     public static let togglingDNS = "6.6.6.6"

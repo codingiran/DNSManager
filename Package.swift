@@ -14,11 +14,18 @@ let package = Package(
             name: "DNSManager",
             targets: ["DNSManager"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/codingiran/ScriptRunner.git", .upToNextMajor(from: "0.0.1")),
+    ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "DNSManager"),
+            name: "DNSManager",
+            dependencies: [
+                .product(name: "ScriptRunner", package: "ScriptRunner"),
+            ],
+            resources: [.copy("Resources/PrivacyInfo.xcprivacy")]),
         .testTarget(
             name: "DNSManagerTests",
             dependencies: ["DNSManager"]),

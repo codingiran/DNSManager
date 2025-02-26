@@ -8,7 +8,7 @@
 import Foundation
 import Network
 
-enum DNSServiceError: LocalizedError {
+enum DNSServiceError: LocalizedError, Sendable {
     case connectionNotReady
     case responseNotComplete
     
@@ -25,8 +25,8 @@ enum DNSServiceError: LocalizedError {
 // https://developer.apple.com/documentation/network
 @available(macOS 10.15, *)
 @available(iOS 13, *)
-public class DNSService {
-    public static func query(host: NWEndpoint.Host = "8.8.8.8", port: NWEndpoint.Port = 53, domain: String, type: DNSType = .A, queue: DispatchQueue, completion: @escaping (DNSRR?, Error?) -> Void) {
+public class DNSService: @unchecked Sendable {
+    public static func query(host: NWEndpoint.Host = "8.8.8.8", port: NWEndpoint.Port = 53, domain: String, type: DNSType = .A, queue: DispatchQueue, completion: @escaping @Sendable (DNSRR?, Error?) -> Void) {
         let connection = NWConnection(host: host, port: port, using: .udp)
         
         connection.stateUpdateHandler = { newState in

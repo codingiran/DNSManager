@@ -8,7 +8,7 @@
 import Foundation
 
 // https://www.ietf.org/rfc/rfc1035.txt 4.1.1. Header section format
-public struct DNSRR {
+public struct DNSRR: @unchecked Sendable {
     var ID: UInt16
     var QR: Bool = false
     var Opcode: UInt8 = 0x0
@@ -186,7 +186,7 @@ public struct DNSRR {
 }
 
 // TYPE fields are used in resource records.
-public enum DNSType: UInt16 {
+public enum DNSType: UInt16, Sendable {
     case A = 0x01 // a host address
     case NS = 0x02 // an authoritative name server
     case MD = 0x03 // a mail destination
@@ -206,7 +206,7 @@ public enum DNSType: UInt16 {
 }
 
 // https://www.ietf.org/rfc/rfc1035.txt 4.1.2. Question section format
-public struct DNSQuestion {
+public struct DNSQuestion: Sendable {
     public var Domain: String
     public var Typ: UInt16
     public var Class: UInt16
@@ -229,7 +229,7 @@ public struct DNSQuestion {
     }
 }
 
-public struct DNSResource {
+public struct DNSResource: Sendable {
     public var Domain: String
     public var Typ: UInt16
     public var Class: UInt16

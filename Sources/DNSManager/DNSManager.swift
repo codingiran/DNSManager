@@ -19,16 +19,16 @@ import Foundation
 #error("DNSManager doesn't support Swift versions below 5.5.")
 #endif
 
-/// Current DNSManager version Release 0.0.3. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
-public let version = "0.0.3"
+/// Current DNSManager version Release 0.0.4. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
+public let version = "0.0.4"
 
-open class DNSManager: ScriptRunner {
+open class DNSManager: ScriptRunner, @unchecked Sendable {
     public static let togglingDNS = "6.6.6.6"
 
     /// 路由器设置的默认 DNS
     private lazy var routerDefaultDNS: [String]? = {
         let bash = ["-c", "scutil --dns | grep 'nameserver' | sort | uniq | cut -f2- -d':' | cut -f2- -d' '"]
-        guard let output = runBash(command: bash) else { return nil }
+        guard let output = try? runBash(command: bash) else { return nil }
         let defaultDNS = output.components(separatedBy: "\n")
         return defaultDNS
     }()
@@ -96,7 +96,7 @@ open class DNSManager: ScriptRunner {
     /// 获取所有的网卡
     private var allNetworkPorts: [String]? {
         let bash = ["-c", "ifconfig -uv | grep '^[a-z0-9]' | awk -F : '{print $1}'"]
-        guard let output = runBash(command: bash) else {
+        guard let output = try? runBash(command: bash) else {
             return nil
         }
         let networkPorts = output.components(separatedBy: "\n").filter { $0.count > 0 }
@@ -108,7 +108,7 @@ open class DNSManager: ScriptRunner {
         guard let allNetworkPorts = allNetworkPorts else { return nil }
         let networkNames: [String] = allNetworkPorts.compactMap { [weak self] in
             let bash = ["-c", "networksetup -listnetworkserviceorder | grep '\($0))' -B1 | grep -v '\($0)' | cut -d ')' -f2 | sed 's/^[ ]*//;s/[ ]*$//'"]
-            let output = self?.runBash(command: bash)
+            let output = try? self?.runBash(command: bash)
             return output?.trimmed
         }
         return networkNames.filter { $0.count > 0 }
@@ -117,7 +117,7 @@ open class DNSManager: ScriptRunner {
     /// 根据网卡名称获取 DNS （"1.1.1.1 8.8.8.8"）
     private func dnsOfNetwork(_ networkName: String) -> String? {
         let bash = ["-c", "networksetup -getdnsservers '\(networkName)'"]
-        let dns = runBash(command: bash)
+        let dns = try? runBash(command: bash)
         guard let dns = dns, !dns.contains("There aren't any DNS Servers") else { return nil }
         return dns.replacingOccurrences(of: "\n", with: " ")
     }
@@ -130,7 +130,7 @@ open class DNSManager: ScriptRunner {
             newDNS = dns
         }
         let bash = ["-c", "networksetup -setdnsservers '\(network)' \(newDNS)"]
-        let output = runBash(command: bash)
+        let output = try? runBash(command: bash)
         return output == nil
     }
 }

@@ -1,5 +1,5 @@
 //
-//  RR.swift
+//  DNSRR.swift
 //  DNSManager
 //
 //  Created by CodingIran on 2022/11/11.

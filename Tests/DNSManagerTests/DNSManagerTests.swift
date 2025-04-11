@@ -18,4 +18,9 @@ final class DNSManagerTests: XCTestCase {
             print(error)
         }
     }
+
+    func testSysDNS() throws {
+        let dns = DNSService.systemDNS
+        debugPrint(dns)
+    }
 }

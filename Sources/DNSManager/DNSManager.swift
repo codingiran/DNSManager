@@ -12,10 +12,11 @@ import Foundation
 #error("DNSManager doesn't support Swift versions below 5.9.")
 #endif
 
-/// Current DNSManager version Release 0.0.5. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
-public let version = "0.0.5"
+/// Current DNSManager version Release 0.0.6. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
+public let version = "0.0.6"
 
 #if os(macOS)
+
 import os.log
 import ScriptRunner
 

@@ -143,3 +143,15 @@ public extension DNSService {
 }
 
 #endif
+
+#if compiler(>=6.0)
+private import SystemDNS
+#else
+@_implementationOnly import SystemDNS
+#endif
+
+public extension DNSService {
+    static var systemDNS: [String] {
+        SystemDNS.getServers()
+    }
+}

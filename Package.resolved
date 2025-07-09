@@ -1,13 +1,13 @@
 {
-  "originHash" : "b905ad944e714e2dab2eefa49c6e00567f813c8083daa005d7428361b4c8a08d",
+  "originHash" : "bc72ad6510003166a12325943daa1bef7fa697ea26c126f19b96076ad3fab377",
   "pins" : [
     {
       "identity" : "scriptrunner",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/codingiran/ScriptRunner.git",
       "state" : {
-        "revision" : "2119204f5898f489d5c8569ba42cb93f823544dd",
-        "version" : "0.0.2"
+        "revision" : "c1616e7abc66db5737beaae5adc6a8336b8385f1",
+        "version" : "0.1.0"
       }
     }
   ],

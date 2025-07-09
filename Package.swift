@@ -17,10 +17,11 @@ let package = Package(
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "DNSManager",
-            targets: ["DNSManager"]),
+            targets: ["DNSManager"]
+        ),
     ],
     dependencies: [
-        .package(url: "https://github.com/codingiran/ScriptRunner.git", .upToNextMajor(from: "0.0.2")),
+        .package(url: "https://github.com/codingiran/ScriptRunner.git", .upToNextMajor(from: "0.1.0")),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -31,20 +32,25 @@ let package = Package(
                 .product(
                     name: "ScriptRunner",
                     package: "ScriptRunner",
-                    condition: .when(platforms: [.macOS])),
+                    condition: .when(platforms: [.macOS])
+                ),
                 .target(name: "SystemDNS"),
             ],
             path: "Sources/DNSManager",
-            resources: [.copy("Resources/PrivacyInfo.xcprivacy")]),
+            resources: [.copy("Resources/PrivacyInfo.xcprivacy")]
+        ),
         .target(
             name: "SystemDNS",
             path: "Sources/SystemDNS",
             resources: [.copy("Resources/PrivacyInfo.xcprivacy")],
             linkerSettings: [
-                .unsafeFlags(["-lresolv"]),
-            ]),
+                .linkedLibrary("resolv"),
+            ]
+        ),
         .testTarget(
             name: "DNSManagerTests",
-            dependencies: ["DNSManager"]),
+            dependencies: ["DNSManager"]
+        ),
     ],
-    swiftLanguageModes: [.v6])
+    swiftLanguageModes: [.v6]
+)

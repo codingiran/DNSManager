@@ -72,25 +72,25 @@ public class DNSService: @unchecked Sendable {
                     let rr = DNSRR.deserialize(data: [UInt8](data))
                     completion(.success(rr))
                 }
-            case .failed(let error):
+            case let .failed(error):
                 cancel(connection)
                 completion(.failure(error))
             case .cancelled:
-#if DEBUG
-                print("cancelled")
-#endif
+                #if DEBUG
+                    print("cancelled")
+                #endif
             case .setup:
-#if DEBUG
-                print("setup")
-#endif
+                #if DEBUG
+                    print("setup")
+                #endif
             case .preparing:
-#if DEBUG
-                print("preparing")
-#endif
+                #if DEBUG
+                    print("preparing")
+                #endif
             default:
-#if DEBUG
-                print("waiting")
-#endif
+                #if DEBUG
+                    print("waiting")
+                #endif
             }
         }
         connection.start(queue: queue)
@@ -105,9 +105,9 @@ public class DNSService: @unchecked Sendable {
     {
         query(host: host, port: port, domain: domain, type: type, queue: queue) { result in
             switch result {
-            case .success(let rr):
+            case let .success(rr):
                 completion(rr, nil)
-            case .failure(let error):
+            case let .failure(error):
                 completion(nil, error)
             }
         }
@@ -121,33 +121,33 @@ public class DNSService: @unchecked Sendable {
 
 #if canImport(_Concurrency)
 
-public extension DNSService {
-    private static let dispatchQueue = DispatchQueue(label: "com.codingiran.DNSManager")
+    public extension DNSService {
+        private static let dispatchQueue = DispatchQueue(label: "com.codingiran.DNSManager")
 
-    static func query(host: NWEndpoint.Host = "8.8.8.8",
-                      port: NWEndpoint.Port = 53,
-                      domain: String,
-                      type: DNSType = .A) async throws -> DNSRR
-    {
-        return try await withCheckedThrowingContinuation { cont in
-            self.query(host: host, port: port, domain: domain, type: type, queue: dispatchQueue) { result in
-                switch result {
-                case .success(let rr):
-                    cont.resume(returning: rr)
-                case .failure(let error):
-                    cont.resume(throwing: error)
+        static func query(host: NWEndpoint.Host = "8.8.8.8",
+                          port: NWEndpoint.Port = 53,
+                          domain: String,
+                          type: DNSType = .A) async throws -> DNSRR
+        {
+            return try await withCheckedThrowingContinuation { cont in
+                self.query(host: host, port: port, domain: domain, type: type, queue: dispatchQueue) { result in
+                    switch result {
+                    case let .success(rr):
+                        cont.resume(returning: rr)
+                    case let .failure(error):
+                        cont.resume(throwing: error)
+                    }
                 }
             }
         }
     }
-}
 
 #endif
 
 #if compiler(>=6.0)
-private import SystemDNS
+    private import SystemDNS
 #else
-@_implementationOnly import SystemDNS
+    @_implementationOnly import SystemDNS
 #endif
 
 public extension DNSService {

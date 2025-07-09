@@ -12,8 +12,8 @@ import Foundation
     #error("DNSManager doesn't support Swift versions below 5.10.")
 #endif
 
-/// Current DNSManager version Release 0.1.0. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
-public let version = "0.1.0"
+/// Current DNSManager version Release 0.1.1. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
+public let version = "0.1.1"
 
 #if os(macOS)
 
@@ -50,8 +50,11 @@ public let version = "0.1.0"
             if FileManager.default.fileExists(atPath: backupDNSPath) {
                 try? FileManager.default.removeItem(atPath: backupDNSPath)
             }
-            if let url = URL(string: backupDNSPath) {
-                try? data?.write(to: url, options: [])
+            let url = URL(fileURLWithPath: backupDNSPath)
+            do {
+                try data?.write(to: url)
+            } catch {
+                os_log("save backupDNS failed: %{public}@", error.localizedDescription)
             }
             // 设置 DNS
             allNetworkNames.forEach { [weak self] in
@@ -65,8 +68,8 @@ public let version = "0.1.0"
             guard let allNetworkNames = allNetworkNames, allNetworkNames.count > 0 else {
                 return
             }
+            let url = URL(fileURLWithPath: backupDNSPath)
             if FileManager.default.fileExists(atPath: backupDNSPath),
-               let url = URL(string: backupDNSPath),
                let data = try? Data(contentsOf: url),
                let DNSMap = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: String],
                DNSMap.count > 0
@@ -80,7 +83,11 @@ public let version = "0.1.0"
                         self?.setDNS(backupDNS, to: $0)
                     }
                 }
-                try? FileManager.default.removeItem(at: url)
+                do {
+                    try FileManager.default.removeItem(at: url)
+                } catch {
+                    os_log("remove backupDNS failed: %{public}@", error.localizedDescription)
+                }
             }
             // 清理所有网卡中的 togglingDNS
             allNetworkNames.forEach { [weak self] in

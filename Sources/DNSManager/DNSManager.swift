@@ -12,8 +12,44 @@ import Foundation
     #error("DNSManager doesn't support Swift versions below 5.10.")
 #endif
 
-/// Current DNSManager version Release 0.1.1. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
-public let version = "0.1.1"
+/// Current DNSManager version Release 0.2.0. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
+public let version = "0.2.0"
+
+/// DNS Manager error types
+public enum DNSManagerError: LocalizedError {
+    case noNetworkServicesFound
+    case backupFileNotFound(String)
+    case invalidBackupFile(String)
+    case backupCleanupFailed(Error)
+    case jsonSerializationFailed(Error)
+    case fileWriteFailed(String, Error)
+    case fileReadFailed(String, Error)
+    case jsonDeserializationFailed(String)
+    case fileRemovalFailed(String, Error)
+
+    public var errorDescription: String? {
+        switch self {
+        case .noNetworkServicesFound:
+            return "No network services found"
+        case let .backupFileNotFound(path):
+            return "Backup file not found at path: \(path)"
+        case let .invalidBackupFile(path):
+            return "Invalid backup file at path: \(path)"
+        case let .backupCleanupFailed(error):
+            return "Failed to cleanup backup file: \(error.localizedDescription)"
+        case let .jsonSerializationFailed(error):
+            return "Failed to serialize DNS configuration to JSON: \(error.localizedDescription)"
+        case let .fileWriteFailed(path, error):
+            return "Failed to write backup file at \(path): \(error.localizedDescription)"
+        case let .fileReadFailed(path, error):
+            return "Failed to read backup file at \(path): \(error.localizedDescription)"
+        case let .jsonDeserializationFailed(path):
+            return "Failed to deserialize JSON from backup file at \(path)"
+        case let .fileRemovalFailed(path, error):
+            return "Failed to remove file at \(path): \(error.localizedDescription)"
+        }
+    }
+}
 
 #if os(macOS)
 
@@ -21,122 +57,185 @@ public let version = "0.1.1"
     import ScriptRunner
 
     open class DNSManager: ScriptRunner, @unchecked Sendable {
-        public static let togglingDNS = "6.6.6.6"
-
-        /// 路由器设置的默认 DNS
-        private lazy var routerDefaultDNS: [String]? = {
+        /// Current system configured DNS servers
+        public var currentSystemDnsServers: [String]? {
             let bash = ["-c", "scutil --dns | grep 'nameserver' | sort | uniq | cut -f2- -d':' | cut -f2- -d' '"]
             guard let output = try? runBash(command: bash) else { return nil }
-            let defaultDNS = output.components(separatedBy: "\n")
-            return defaultDNS
-        }()
+            let dnsServers = output.components(separatedBy: "\n")
+            return dnsServers
+        }
 
-        /// 接管 DNS
-        public func takeOverDNS(_ dns: String = togglingDNS, backupDNSPath: String) {
-            // 接管前保存用户设置的所有 DNS
-            guard let allNetworkNames = allNetworkNames else { return }
-            if #available(macOS 11.0, *) {
-                os_log("takeOverDNS allNetworkNames is \(allNetworkNames)")
+        /// Backup current DNS settings and override all network services with target DNS servers
+        public func overrideAndBackupDnsServers(_ targetDnsServers: [String], backupFilePath: String) throws {
+            guard let allNetworkServiceNames = allNetworkServiceNames else {
+                throw DNSManagerError.noNetworkServicesFound
             }
+
+            if #available(macOS 11.0, *) {
+                os_log("Found network services: \(allNetworkServiceNames)")
+                os_log("Target DNS servers: \(targetDnsServers)")
+            }
+
+            let targetDnsString = targetDnsServers.joined(separator: " ")
             var DNSMap: [String: String] = [:]
-            allNetworkNames.forEach { [weak self] in
+            allNetworkServiceNames.forEach { [weak self] in
+                guard let self else { return }
                 var backupDNS = ""
-                if let dnsOfNetwork = self?.dnsOfNetwork($0), dnsOfNetwork != dns {
-                    backupDNS = dnsOfNetwork
+                if let currentDns = getDnsServers(for: $0), currentDns != targetDnsString {
+                    backupDNS = currentDns
                 }
                 DNSMap[$0] = backupDNS
             }
-            let data = try? JSONSerialization.data(withJSONObject: DNSMap, options: [])
-            if FileManager.default.fileExists(atPath: backupDNSPath) {
-                try? FileManager.default.removeItem(atPath: backupDNSPath)
-            }
-            let url = URL(fileURLWithPath: backupDNSPath)
+
+            // Serialize DNS configuration to JSON
+            let data: Data
             do {
-                try data?.write(to: url)
+                data = try JSONSerialization.data(withJSONObject: DNSMap, options: [])
             } catch {
-                os_log("save backupDNS failed: %{public}@", error.localizedDescription)
+                throw DNSManagerError.jsonSerializationFailed(error)
             }
-            // 设置 DNS
-            allNetworkNames.forEach { [weak self] in
-                self?.setDNS(dns, to: $0)
-            }
-        }
 
-        /// 还原 DNS
-        public func restoreDNS(backupDNSPath: String) {
-            // 获取备份的DNS
-            guard let allNetworkNames = allNetworkNames, allNetworkNames.count > 0 else {
-                return
-            }
-            let url = URL(fileURLWithPath: backupDNSPath)
-            if FileManager.default.fileExists(atPath: backupDNSPath),
-               let data = try? Data(contentsOf: url),
-               let DNSMap = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: String],
-               DNSMap.count > 0
-            {
-                // 有记录，恢复成记录的 DNS
-                if #available(macOS 11.0, *) {
-                    os_log("restoreDNS allNetworkNames is \(allNetworkNames)")
-                }
-                allNetworkNames.forEach { [weak self] in
-                    if let backupDNS = DNSMap[$0] {
-                        self?.setDNS(backupDNS, to: $0)
-                    }
-                }
+            // Remove existing backup file if present
+            if FileManager.default.fileExists(atPath: backupFilePath) {
                 do {
-                    try FileManager.default.removeItem(at: url)
+                    try FileManager.default.removeItem(atPath: backupFilePath)
                 } catch {
-                    os_log("remove backupDNS failed: %{public}@", error.localizedDescription)
+                    throw DNSManagerError.fileRemovalFailed(backupFilePath, error)
                 }
             }
-            // 清理所有网卡中的 togglingDNS
-            allNetworkNames.forEach { [weak self] in
-                if let dns = self?.dnsOfNetwork($0), dns == DNSManager.togglingDNS {
-                    // 清理
-                    self?.setDNS(nil, to: $0)
-                }
+
+            // Write backup file
+            let url = URL(fileURLWithPath: backupFilePath)
+            do {
+                try data.write(to: url)
+            } catch {
+                throw DNSManagerError.fileWriteFailed(backupFilePath, error)
+            }
+
+            // Apply DNS servers to all network services
+            allNetworkServiceNames.forEach { [weak self] in
+                guard let self else { return }
+                setDnsServers(targetDnsServers, to: $0)
             }
         }
 
-        /// 获取所有的网卡
-        private var allNetworkPorts: [String]? {
+        /// Backup and override DNS with single server (convenience method)
+        public func overrideAndBackupDnsServer(_ targetDnsServer: String, backupFilePath: String) throws {
+            try overrideAndBackupDnsServers([targetDnsServer], backupFilePath: backupFilePath)
+        }
+
+        /// Restore DNS servers from backup file
+        public func restoreDnsServersFromBackup(backupFilePath: String) throws {
+            guard let allNetworkServiceNames = allNetworkServiceNames,
+                  allNetworkServiceNames.count > 0
+            else {
+                throw DNSManagerError.noNetworkServicesFound
+            }
+
+            // Check if backup file exists
+            guard FileManager.default.fileExists(atPath: backupFilePath) else {
+                throw DNSManagerError.backupFileNotFound(backupFilePath)
+            }
+
+            let url = URL(fileURLWithPath: backupFilePath)
+
+            // Read backup file
+            let data: Data
+            do {
+                data = try Data(contentsOf: url)
+            } catch {
+                throw DNSManagerError.fileReadFailed(backupFilePath, error)
+            }
+
+            // Deserialize JSON
+            let DNSMap: [String: String]
+            do {
+                guard let jsonObject = try JSONSerialization.jsonObject(with: data, options: []) as? [String: String],
+                      jsonObject.count > 0
+                else {
+                    throw DNSManagerError.jsonDeserializationFailed(backupFilePath)
+                }
+                DNSMap = jsonObject
+            } catch {
+                if error is DNSManagerError {
+                    throw error
+                } else {
+                    throw DNSManagerError.jsonDeserializationFailed(backupFilePath)
+                }
+            }
+
+            // Restore DNS settings
+            if #available(macOS 11.0, *) {
+                os_log("Restoring DNS for network services: \(allNetworkServiceNames)")
+            }
+
+            allNetworkServiceNames.forEach { [weak self] in
+                guard let self else { return }
+                if let backupDNS = DNSMap[$0] {
+                    setDnsServers(backupDNS, to: $0)
+                }
+            }
+
+            // Clean up backup file after successful restoration
+            do {
+                try FileManager.default.removeItem(at: url)
+            } catch {
+                throw DNSManagerError.fileRemovalFailed(backupFilePath, error)
+            }
+        }
+
+        /// All active network interface names
+        public var allNetworkInterfaceNames: [String]? {
             let bash = ["-c", "ifconfig -uv | grep '^[a-z0-9]' | awk -F : '{print $1}'"]
             guard let output = try? runBash(command: bash) else {
                 return nil
             }
-            let networkPorts = output.components(separatedBy: "\n").filter { $0.count > 0 }
-            return networkPorts
+            let interfaceNames = output.components(separatedBy: "\n").filter { $0.count > 0 }
+            return interfaceNames
         }
 
-        /// 获取全部网卡名称
-        private var allNetworkNames: [String]? {
-            guard let allNetworkPorts = allNetworkPorts else { return nil }
-            let networkNames: [String] = allNetworkPorts.compactMap { [weak self] in
+        /// All network service names (user-friendly names like "Wi-Fi", "Ethernet")
+        public var allNetworkServiceNames: [String]? {
+            guard let allNetworkInterfaceNames = allNetworkInterfaceNames else { return nil }
+            let serviceNames: [String] = allNetworkInterfaceNames.compactMap { [weak self] in
                 let bash = ["-c", "networksetup -listnetworkserviceorder | grep '\($0))' -B1 | grep -v '\($0)' | cut -d ')' -f2 | sed 's/^[ ]*//;s/[ ]*$//'"]
                 let output = try? self?.runBash(command: bash)
                 return output?.trimmed
             }
-            return networkNames.filter { $0.count > 0 }
+            return serviceNames.filter { $0.count > 0 }
         }
 
-        /// 根据网卡名称获取 DNS （"1.1.1.1 8.8.8.8"）
-        private func dnsOfNetwork(_ networkName: String) -> String? {
-            let bash = ["-c", "networksetup -getdnsservers '\(networkName)'"]
+        /// Get DNS servers for specified network service (returns space-separated string)
+        private func getDnsServers(for networkServiceName: String) -> String? {
+            let bash = ["-c", "networksetup -getdnsservers '\(networkServiceName)'"]
             let dns = try? runBash(command: bash)
             guard let dns = dns, !dns.contains("There aren't any DNS Servers") else { return nil }
             return dns.replacingOccurrences(of: "\n", with: " ")
         }
 
-        /// 给网卡设置 DNS
+        /// Set DNS servers for specified network service
         @discardableResult
-        private func setDNS(_ dns: String?, to network: String) -> Bool {
-            var newDNS = "empty"
-            if let dns, dns.count > 0 {
-                newDNS = dns
+        private func setDnsServers(_ dnsServers: [String], to networkServiceName: String) -> Bool {
+            let dnsArguments: String
+            if dnsServers.isEmpty {
+                dnsArguments = "Empty"
+            } else {
+                dnsArguments = dnsServers.joined(separator: " ")
             }
-            let bash = ["-c", "networksetup -setdnsservers '\(network)' \(newDNS)"]
+            let bash = ["-c", "networksetup -setdnsservers '\(networkServiceName)' \(dnsArguments)"]
             let output = try? runBash(command: bash)
             return output == nil
+        }
+
+        /// Set DNS server from string (backward compatibility)
+        @discardableResult
+        private func setDnsServers(_ dnsServer: String?, to networkServiceName: String) -> Bool {
+            if let dnsServer, !dnsServer.isEmpty {
+                let dnsArray = dnsServer.components(separatedBy: " ").filter { !$0.isEmpty }
+                return setDnsServers(dnsArray, to: networkServiceName)
+            } else {
+                return setDnsServers([], to: networkServiceName)
+            }
         }
     }
 

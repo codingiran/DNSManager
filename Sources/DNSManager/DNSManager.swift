@@ -119,6 +119,17 @@ public enum DNSManagerError: LocalizedError, Sendable {
             }
         }
 
+        /// Clear DNS cache
+        public func clearDnsCache() throws {
+            // Clear directory services cache
+            let flushCommand = ["-c", "dscacheutil -flushcache"]
+            try runBash(command: flushCommand)
+
+            // Restart mDNSResponder to clear DNS cache (with fallback for different macOS versions)
+            let restartCommand = ["-c", "killall -HUP mDNSResponder 2>/dev/null || killall -HUP mdnsresponder 2>/dev/null || true"]
+            try runBash(command: restartCommand)
+        }
+
         /// Backup and override DNS with single server (convenience method)
         public func overrideAndBackupDnsServer(_ targetDnsServer: String, backupFilePath: String) throws {
             try overrideAndBackupDnsServers([targetDnsServer], backupFilePath: backupFilePath)

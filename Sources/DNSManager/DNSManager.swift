@@ -12,11 +12,11 @@ import Foundation
     #error("DNSManager doesn't support Swift versions below 5.10.")
 #endif
 
-/// Current DNSManager version Release 0.2.0. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
-public let version = "0.2.0"
+/// Current DNSManager version Release 1.0.0. Necessary since SPM doesn't use dynamic libraries. Plus this will be more accurate.
+public let version = "1.0.0"
 
 /// DNS Manager error types
-public enum DNSManagerError: LocalizedError {
+public enum DNSManagerError: LocalizedError, Sendable {
     case noNetworkServicesFound
     case backupFileNotFound(String)
     case invalidBackupFile(String)
